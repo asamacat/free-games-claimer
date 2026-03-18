@@ -113,7 +113,7 @@ try {
   // loading all games became flaky; see https://github.com/vogler/free-games-claimer/issues/357
     await page.keyboard.press('PageDown'); // scrolling to straight to the bottom started to skip loading some games
     await page.waitForLoadState('networkidle'); // wait for all games to be loaded
-    await page.waitForTimeout(3000); // TODO networkidle wasn't enough to load all already collected games
+    await page.waitForTimeout(5000); // wait longer to ensure all already collected games are loaded
     // do it again since once wasn't enough...
     await page.keyboard.press('PageDown');
     await page.waitForTimeout(3000);
@@ -145,11 +145,11 @@ try {
     const [p, isNew] = await sameOrNewPage(url);
     const dueDateOrg = await p.locator('.availability-date .tw-bold').innerText();
     const dueDate = new Date(Date.parse(dueDateOrg + ' 17:00'));
-    const daysLeft = (dueDate.getTime() - Date.now())/1000/60/60/24;
+    const daysLeft = (dueDate.getTime() - Date.now()) / 1000 / 60 / 60 / 24;
     console.log(' ', await p.locator('.availability-date').innerText(), '->', daysLeft.toFixed(2));
     if (isNew) await p.close();
     return daysLeft > cfg.pg_timeLeft;
-  }
+  };
   console.log('\nNumber of free unclaimed games (Prime Gaming):', internal.length);
   // claim games in internal store
   for (const card of internal) {
@@ -366,7 +366,7 @@ try {
     await loot.waitFor();
 
     process.stdout.write('Loading all DLCs on page...');
-    await scrollUntilStable(() => loot.locator('[data-a-target="item-card"]').count())
+    await scrollUntilStable(() => loot.locator('[data-a-target="item-card"]').count());
 
     console.log('\nNumber of already claimed DLC:', await loot.locator('p:has-text("Collected")').count());
 

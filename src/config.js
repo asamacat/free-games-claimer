@@ -4,6 +4,16 @@ import { dataDir } from './util.js';
 dotenv.config({ path: 'data/config.env' }); // loads env vars from file - will not set vars that are already set, i.e., can overwrite values from file by prefixing, e.g., VAR=VAL node ...
 
 // Options - also see table in README.md
+
+function decodeBase64(str) {
+  if (!str) return '';
+  try {
+    return Buffer.from(str, 'base64').toString('utf8');
+  } catch (e) {
+    return str;
+  }
+}
+
 export const cfg = {
   debug: process.env.DEBUG == '1' || process.env.PWDEBUG == '1', // runs non-headless and opens https://playwright.dev/docs/inspector
   debug_network: process.env.DEBUG_NETWORK == '1', // log network requests and responses
@@ -30,20 +40,20 @@ export const cfg = {
   },
   // auth epic-games
   eg_email: process.env.EG_EMAIL || process.env.EMAIL,
-  eg_password: process.env.EG_PASSWORD || process.env.PASSWORD,
+  eg_password: decodeBase64(process.env.EG_PASSWORD || process.env.PASSWORD),
   eg_otpkey: process.env.EG_OTPKEY,
   eg_parentalpin: process.env.EG_PARENTALPIN,
   // auth prime-gaming
   pg_email: process.env.PG_EMAIL || process.env.EMAIL,
-  pg_password: process.env.PG_PASSWORD || process.env.PASSWORD,
+  pg_password: decodeBase64(process.env.PG_PASSWORD || process.env.PASSWORD),
   pg_otpkey: process.env.PG_OTPKEY,
   // auth gog
   gog_email: process.env.GOG_EMAIL || process.env.EMAIL,
-  gog_password: process.env.GOG_PASSWORD || process.env.PASSWORD,
+  gog_password: decodeBase64(process.env.GOG_PASSWORD || process.env.PASSWORD),
   gog_newsletter: process.env.GOG_NEWSLETTER == '1', // do not unsubscribe from newsletter after claiming a game
   // auth AliExpress
   ae_email: process.env.AE_EMAIL || process.env.EMAIL,
-  ae_password: process.env.AE_PASSWORD || process.env.PASSWORD,
+  ae_password: decodeBase64(process.env.AE_PASSWORD || process.env.PASSWORD),
   // OTP only via GOG_EMAIL, can't add app...
   // experimmental
   pg_redeem: process.env.PG_REDEEM == '1', // prime-gaming: redeem keys on external stores
