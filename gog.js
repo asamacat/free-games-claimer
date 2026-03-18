@@ -106,7 +106,12 @@ try {
     console.log(`Current free game: ${chalk.blue(title)} - ${url}`);
     db.data[user][title] ||= { title, time: datetime(), url };
     if (cfg.dryrun) process.exit(1);
-    // await page.locator('#giveaway:not(.is-loading)').waitFor(); // otherwise screenshot is sometimes with loading indicator instead of game title; #TODO fix, skipped due to timeout, see #240
+    // wait for loading state to finish before screenshot, but fallback after a few seconds so it doesn't break (#240)
+    try {
+      await page.locator('.is-loading').waitFor({ state: 'hidden', timeout: 5000 });
+    } catch (e) {
+      console.log('Loading indicator did not disappear, taking screenshot anyway.');
+    }
     await banner.screenshot({ path: screenshot(`${filenamify(title)}.png`) }); // overwrites every time - only keep first?
 
     // await banner.getByRole('button', { name: 'Add to library' }).click();
