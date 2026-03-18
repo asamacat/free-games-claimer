@@ -44,18 +44,20 @@ try {
   await page.waitForLoadState('networkidle');
   console.log('All Games:', await games.count());
   for (const game of await games.all()) {
-    const title = await game.locator('span a').innerText();
-    let time, last, achievements, size;
-    const ltime = game.locator('span:has-text("total played")');
-    if (await ltime.count()) time = (await ltime.first().innerText()).split('\n')[1];
-    const llast = game.locator('span:has-text("last played")');
-    if (await llast.count()) last = (await llast.first().innerText()).split('\n')[1];
-    const lachievements = game.locator('a:has-text("achievements") + span');
-    if (await lachievements.count()) achievements = (await lachievements.first().innerText()).split('\n');
-    const lsize = game.locator('span:has(+ button)');
-    if (await lsize.count()) size = await lsize.first().innerText();
-    const url = await game.locator('a').first().getAttribute('href');
-    const img = await game.locator('img').first().getAttribute('src');
+    const [title, url, img, time_raw, last_raw, achievements_raw, size_raw] = await Promise.all([
+      game.locator('span a').innerText(),
+      game.locator('a').first().getAttribute('href'),
+      game.locator('img').first().getAttribute('src'),
+      game.locator('span:has-text("total played")').allInnerTexts(),
+      game.locator('span:has-text("last played")').allInnerTexts(),
+      game.locator('a:has-text("achievements") + span').allInnerTexts(),
+      game.locator('span:has(+ button)').allInnerTexts(),
+    ]);
+    const time = time_raw.length ? time_raw[0].split('\n')[1] : undefined;
+    const last = last_raw.length ? last_raw[0].split('\n')[1] : undefined;
+    const achievements = achievements_raw.length ? achievements_raw[0].split('\n') : undefined;
+    const size = size_raw.length ? size_raw[0] : undefined;
+
     const stat = { title, time, last, achievements, size, url, img };
     console.log(stat);
     db.data[title] = stat;
