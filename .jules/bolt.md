@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimizing Playwright scraping loops
+**Learning:** Sequential `.count()` followed by `.innerText()` in Playwright loops is a performance anti-pattern. Because Playwright has a client/server architecture, each `locator.count()` and `locator.innerText()` call adds round-trip IPC overhead. In large loops (e.g., hundreds of games on a single page like `steam-games.js`), this causes significant slowdowns.
+**Action:** When scraping elements from a long list, batch Playwright requests concurrently using `Promise.all` alongside `.allInnerTexts()`. This extracts all matching text in a single round-trip, significantly reducing overhead.
