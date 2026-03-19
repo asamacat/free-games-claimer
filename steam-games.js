@@ -44,18 +44,25 @@ try {
   await page.waitForLoadState('networkidle');
   console.log('All Games:', await games.count());
   for (const game of await games.all()) {
-    const title = await game.locator('span a').innerText();
     let time, last, achievements, size;
-    const ltime = game.locator('span:has-text("total played")');
-    if (await ltime.count()) time = (await ltime.first().innerText()).split('\n')[1];
-    const llast = game.locator('span:has-text("last played")');
-    if (await llast.count()) last = (await llast.first().innerText()).split('\n')[1];
-    const lachievements = game.locator('a:has-text("achievements") + span');
-    if (await lachievements.count()) achievements = (await lachievements.first().innerText()).split('\n');
-    const lsize = game.locator('span:has(+ button)');
-    if (await lsize.count()) size = await lsize.first().innerText();
-    const url = await game.locator('a').first().getAttribute('href');
-    const img = await game.locator('img').first().getAttribute('src');
+    // Bolt: Optimized sequential Playwright locator lookups with Promise.all and allInnerTexts
+    // By requesting elements concurrently, we save significant overhead avoiding repeated IPC boundary crossing
+    const [titleTexts, timeTexts, lastTexts, achievementTexts, sizeTexts, url, img] = await Promise.all([
+      game.locator('span a').innerText(),
+      game.locator('span:has-text("total played")').allInnerTexts(),
+      game.locator('span:has-text("last played")').allInnerTexts(),
+      game.locator('a:has-text("achievements") + span').allInnerTexts(),
+      game.locator('span:has(+ button)').allInnerTexts(),
+      game.locator('a').first().getAttribute('href'),
+      game.locator('img').first().getAttribute('src'),
+    ]);
+
+    const title = titleTexts;
+    if (timeTexts.length) time = timeTexts[0].split('\n')[1];
+    if (lastTexts.length) last = lastTexts[0].split('\n')[1];
+    if (achievementTexts.length) achievements = achievementTexts[0].split('\n');
+    if (sizeTexts.length) size = sizeTexts[0];
+
     const stat = { title, time, last, achievements, size, url, img };
     console.log(stat);
     db.data[title] = stat;
