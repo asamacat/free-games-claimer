@@ -1,3 +1,3 @@
-## 2024-05-18 - Optimizing Playwright scraping loops
-**Learning:** Sequential `.count()` followed by `.innerText()` in Playwright loops is a performance anti-pattern. Because Playwright has a client/server architecture, each `locator.count()` and `locator.innerText()` call adds round-trip IPC overhead. In large loops (e.g., hundreds of games on a single page like `steam-games.js`), this causes significant slowdowns.
-**Action:** When scraping elements from a long list, batch Playwright requests concurrently using `Promise.all` alongside `.allInnerTexts()`. This extracts all matching text in a single round-trip, significantly reducing overhead.
+## 2024-05-24 - Batching Playwright CDP locator properties
+**Learning:** Sequential `.innerText()` and `.getAttribute()` Playwright calls over elements of an array (e.g. from `.all()`) cause severe CDP round-trip IPC overhead. In large loops, this results in significant delays.
+**Action:** When scraping properties from Playwright locators mapped over lists, batch the queries concurrently via `Promise.all` with destructured array assignments `const [prop1, prop2] = await Promise.all([loc1, loc2])`.
