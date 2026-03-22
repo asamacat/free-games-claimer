@@ -96,17 +96,29 @@ try {
   page.locator('button:has-text("Accept All Cookies")').click().catch(_ => { });
 
   const ids = [];
-  for (const p of await page.locator('article.asset').all()) {
+  const articles = await page.locator('article.asset').all();
+  // Bolt: Optimized sequential Playwright locator lookups with Promise.all and map
+  // By requesting elements concurrently, we save significant overhead avoiding repeated IPC boundary crossing
+  const articleDataList = await Promise.all(articles.map(async p => {
     const link = p.locator('h3 a');
-    const title = await link.innerText();
-    const url = 'https://www.unrealengine.com' + await link.getAttribute('href');
+    const [title, href, pClass, inCartCount] = await Promise.all([
+      link.innerText(),
+      link.getAttribute('href'),
+      p.getAttribute('class'),
+      p.locator('.btn .in-cart').count(),
+    ]);
+    return { p, title, href, pClass, inCartCount };
+  }));
+
+  for (const { p, title, href, pClass, inCartCount } of articleDataList) {
+    const url = 'https://www.unrealengine.com' + href;
     console.log([title, url]);
     const id = url.split('/').pop();
     db.data[user][id] ||= { title, time: datetime(), url, status: 'failed' }; // this will be set on the initial run only!
     const notify_game = { title, url, status: 'failed' };
     notify_games.push(notify_game); // status is updated below
     // if (await p.locator('.btn .add-review-btn').count()) { // did not work
-    if ((await p.getAttribute('class')).includes('asset--owned')) {
+    if (pClass.includes('asset--owned')) {
       console.log('  ↳ Already claimed');
       if (db.data[user][id].status != 'claimed') {
         db.data[user][id].status = 'existed';
@@ -114,7 +126,7 @@ try {
       }
       continue;
     }
-    if (await p.locator('.btn .in-cart').count()) {
+    if (inCartCount) {
       console.log('  ↳ Already in cart');
     } else {
       await p.locator('.btn .add').click();
