@@ -5,3 +5,7 @@
 ## 2024-05-19 - Optimizing sequential element attribute extraction in Playwright
 **Learning:** Even when `allInnerTexts()` isn't applicable because you need a mix of attributes, classes, and inner text from different sub-elements (like in `unrealengine.js` and `prime-gaming.js`), using sequential `await` for each locator action inside a `.map()` or loop still incurs significant IPC overhead.
 **Action:** To minimize Playwright IPC overhead when processing lists of elements, use `Promise.all` with `.map()` to batch sequential locator actions (like `.innerText()` and `.getAttribute()`) concurrently instead of awaiting them one by one inside a loop.
+
+## 2026-03-25 - Non-blocking configuration I/O
+**Learning:** Performing synchronous file operations (`fs.writeFileSync`, `fs.readFileSync`) within an `async` function blocks the Node.js event loop, preventing it from handling other concurrent tasks even if the operation itself is relatively fast.
+**Action:** Always prefer `fs.promises` (or `fs/promises`) for I/O operations inside `async` functions to ensure the event loop remains unblocked and the application stays responsive.

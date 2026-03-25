@@ -26,14 +26,18 @@ async function runConfig() {
   console.log(`Settings will be saved to ${configPath}\n`);
 
   const existingConfig = {};
-  if (fs.existsSync(configPath)) {
-    const raw = fs.readFileSync(configPath, 'utf8');
+  try {
+    const raw = await fs.promises.readFile(configPath, 'utf8');
     raw.split('\n').forEach(line => {
       const parts = line.split('=');
       if (parts.length >= 2) {
         existingConfig[parts[0].trim()] = parts.slice(1).join('=').trim();
       }
     });
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
   }
 
   const getDef = (key, def = '') => {
@@ -150,8 +154,8 @@ async function runConfig() {
   }
 
   // Create data dir if not exists
-  fs.mkdirSync(dataDir(''), { recursive: true });
-  fs.writeFileSync(configPath, configContent);
+  await fs.promises.mkdir(dataDir(''), { recursive: true });
+  await fs.promises.writeFile(configPath, configContent);
   console.log(`\nConfiguration successfully saved to ${configPath}`);
 }
 
