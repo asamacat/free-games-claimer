@@ -143,6 +143,6 @@ export const notify = html => new Promise((resolve, reject) => {
   });
 });
 
-export const escapeHtml = unsafe => unsafe.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll('\'', '&#039;');
-
-export const html_game_list = games => games.map(g => `- <a href="${g.url}">${escapeHtml(g.title)}</a> (${g.status})`).join('<br>');
+import { escapeHtml as _escapeHtml, html_game_list as _html_game_list } from './pure_util.js';
+export const escapeHtml = _escapeHtml;
+export const html_game_list = _html_game_list;
