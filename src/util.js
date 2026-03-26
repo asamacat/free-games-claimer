@@ -1,6 +1,7 @@
 // https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crypto from 'node:crypto';
 // not the same since these will give the absolute paths for this file instead of for the file using them
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -146,3 +147,54 @@ export const notify = html => new Promise((resolve, reject) => {
 export const escapeHtml = unsafe => unsafe.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll('\'', '&#039;');
 
 export const html_game_list = games => games.map(g => `- <a href="${g.url}">${escapeHtml(g.title)}</a> (${g.status})`).join('<br>');
+
+export function encodeBase64(str) {
+  if (!str) return '';
+  return Buffer.from(str).toString('base64');
+}
+
+export function decodeBase64(str) {
+  if (!str) return '';
+  try {
+    return Buffer.from(str, 'base64').toString('utf8');
+  } catch (e) {
+    return str;
+  }
+}
+
+export function encryptValue(text, masterKey) {
+  if (!text || !masterKey) return text;
+  const key = crypto.createHash('sha256').update(masterKey).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  let encrypted = cipher.update(text, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag().toString('hex');
+  return `secret:v1:${iv.toString('hex')}:${authTag}:${encrypted}`;
+}
+
+export function decryptValue(cipherText, masterKey) {
+  if (!cipherText || !cipherText.startsWith('secret:v1:')) {
+    return decodeBase64(cipherText);
+  }
+  if (!masterKey) {
+    console.error('Warning: FGC_MASTER_KEY not set, cannot decrypt secret.');
+    return cipherText;
+  }
+  try {
+    const parts = cipherText.split(':');
+    if (parts.length !== 5) return cipherText;
+    const iv = Buffer.from(parts[2], 'hex');
+    const authTag = Buffer.from(parts[3], 'hex');
+    const encrypted = parts[4];
+    const key = crypto.createHash('sha256').update(masterKey).digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (e) {
+    console.error('Error decrypting value:', e.message);
+    return cipherText;
+  }
+}

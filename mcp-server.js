@@ -7,9 +7,10 @@ import {
 import { exec } from 'child_process';
 import util from 'util';
 import fs from 'fs';
-import { dataDir } from './src/util.js';
+import { dataDir, encryptValue, encodeBase64 } from './src/util.js';
 
 const execPromise = util.promisify(exec);
+const masterKey = process.env.FGC_MASTER_KEY;
 
 const server = new Server(
   {
@@ -77,11 +78,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     ],
   };
 });
-
-function encodeBase64(str) {
-  if (!str) return '';
-  return Buffer.from(str).toString('base64');
-}
 
 server.setRequestHandler(CallToolRequestSchema, async request => {
   const { name, arguments: args } = request.params;
@@ -157,9 +153,9 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
       });
     }
 
-    // Process base64 if it's a password
+    // Process base64 or encryption if it's a password
     if (key.includes('PASSWORD')) {
-      existingConfig[key] = encodeBase64(value);
+      existingConfig[key] = masterKey ? encryptValue(value, masterKey) : encodeBase64(value);
     } else {
       existingConfig[key] = value;
     }
@@ -172,7 +168,7 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
     }
 
     fs.mkdirSync(dataDir(''), { recursive: true });
-    fs.writeFileSync(configPath, configContent);
+    fs.writeFileSync(configPath, configContent, { mode: 0o600 });
 
     return {
       content: [{ type: 'text', text: `Successfully updated ${key} in config.` }],

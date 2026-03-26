@@ -93,6 +93,7 @@ Available options/variables and their default values:
 | GOG_PASSWORD  	|         	| GOG password for login. Overrides PASSWORD.                            	|
 | GOG_NEWSLETTER	| 0       	| Do not unsubscribe from newsletter after claiming a game if 1.         	|
 | LG_EMAIL        |         	| Legacy Games: email to use for redeeming (if not set, defaults to PG_EMAIL)  |
+| FGC_MASTER_KEY  |         	| Optional master key to encrypt passwords in `config.env`.                      |
 
 See `src/config.js` for all options.
 
@@ -122,7 +123,9 @@ To get the OTP key, it is easiest to follow the store's guide for adding an auth
 - **GOG**: only offers OTP via email
 <!-- - **Xbox**: visit [additional security](https://account.live.com/proofs/manage/additional) > Add a new way to sign in or verify > Use an app > Set up a different Authenticator app > I can't scan the bar code > copy the bold key and use it to set `XBOX_OTPKEY` -->
 
-Beware that storing passwords and OTP keys as clear text may be a security risk. Use a unique/generated password! TODO: maybe at least offer to base64 encode for storage.
+Beware that storing passwords and OTP keys as clear text may be a security risk. Use a unique/generated password!
+By default, passwords in `data/config.env` are base64-encoded, which provides no confidentiality.
+For better security, you can set the `FGC_MASTER_KEY` environment variable. If set, `node fgc config` will encrypt your passwords using AES-256-GCM.
 
 ### Epic Games Store
 Run `node epic-games` (locally or in Docker).

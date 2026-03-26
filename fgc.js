@@ -1,29 +1,18 @@
 import fs from 'fs';
 import { cfg } from './src/config.js';
 import enquirer from 'enquirer';
-import { dataDir } from './src/util.js';
+import { dataDir, encryptValue, decryptValue, encodeBase64 } from './src/util.js';
 
 const configPath = dataDir('config.env');
-
-// Simple Base64 encode/decode
-function encodeBase64(str) {
-  if (!str) return '';
-  return Buffer.from(str).toString('base64');
-}
-
-function decodeBase64(str) {
-  if (!str) return '';
-  // Try decoding only if it looks like base64
-  try {
-    return Buffer.from(str, 'base64').toString('utf8');
-  } catch (e) {
-    return str;
-  }
-}
+const masterKey = process.env.FGC_MASTER_KEY;
 
 async function runConfig() {
   console.log('--- Free Games Claimer Configuration Assistant ---');
   console.log(`Settings will be saved to ${configPath}\n`);
+
+  if (!masterKey) {
+    console.log('Tip: Set FGC_MASTER_KEY environment variable to encrypt your passwords.\n');
+  }
 
   const existingConfig = {};
   if (fs.existsSync(configPath)) {
@@ -39,7 +28,7 @@ async function runConfig() {
   const getDef = (key, def = '') => {
     let val = existingConfig[key] || def;
     if (val && key.includes('PASSWORD')) {
-      val = decodeBase64(val);
+      val = decryptValue(val, masterKey);
     }
     return val;
   };
@@ -56,7 +45,7 @@ async function runConfig() {
     {
       type: 'password',
       name: 'PASSWORD',
-      message: 'Default Password (will be base64 encoded):',
+      message: `Default Password (${masterKey ? 'will be encrypted' : 'will be base64 encoded'}):`,
       initial: getDef('PASSWORD'),
     },
     {
@@ -78,7 +67,7 @@ async function runConfig() {
     {
       type: 'password',
       name: 'EG_PASSWORD',
-      message: 'Epic Games Password (leave blank to use Default Password):',
+      message: `Epic Games Password (${masterKey ? 'will be encrypted' : 'will be base64 encoded'}, leave blank to use Default Password):`,
       initial: getDef('EG_PASSWORD'),
     },
     {
@@ -96,7 +85,7 @@ async function runConfig() {
     {
       type: 'password',
       name: 'PG_PASSWORD',
-      message: 'Prime Gaming Password (leave blank to use Default Password):',
+      message: `Prime Gaming Password (${masterKey ? 'will be encrypted' : 'will be base64 encoded'}, leave blank to use Default Password):`,
       initial: getDef('PG_PASSWORD'),
     },
     {
@@ -124,7 +113,7 @@ async function runConfig() {
     {
       type: 'password',
       name: 'GOG_PASSWORD',
-      message: 'GOG Password (leave blank to use Default Password):',
+      message: `GOG Password (${masterKey ? 'will be encrypted' : 'will be base64 encoded'}, leave blank to use Default Password):`,
       initial: getDef('GOG_PASSWORD'),
     },
   ]);
@@ -135,7 +124,7 @@ async function runConfig() {
   for (const [key, value] of Object.entries(response)) {
     if (value) {
       if (key.includes('PASSWORD')) {
-        configContent += `${key}=${encodeBase64(value)}\n`;
+        configContent += `${key}=${masterKey ? encryptValue(value, masterKey) : encodeBase64(value)}\n`;
       } else {
         configContent += `${key}=${value}\n`;
       }
@@ -151,7 +140,7 @@ async function runConfig() {
 
   // Create data dir if not exists
   fs.mkdirSync(dataDir(''), { recursive: true });
-  fs.writeFileSync(configPath, configContent);
+  fs.writeFileSync(configPath, configContent, { mode: 0o600 });
   console.log(`\nConfiguration successfully saved to ${configPath}`);
 }
 
