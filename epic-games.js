@@ -149,7 +149,9 @@ try {
   // debug showed that in those cases the href was still correct, so we `goto` the urls instead of clicking.
   // Alternative: parse the json loaded to build the page https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions
   // i.e. filter data.Catalog.searchStore.elements for .promotions.promotionalOffers being set and build URL with .catalogNs.mappings[0].pageSlug or .urlSlug if not set to some wrong id like it was the case for spirit-of-the-north-f58a66 - this is also what's done here: https://github.com/claabs/epicgames-freegames-node/blob/938a9653ffd08b8284ea32cf01ac8727d25c5d4c/src/puppet/free-games.ts#L138-L213
-  const urlSlugs = await Promise.all((await game_loc.elementHandles()).map(a => a.getAttribute('href')));
+  // Bolt: Optimized element scraping using locator.evaluateAll()
+  // This extracts all attributes in a single round-trip, changing IPC latency from O(N) to O(1)
+  const urlSlugs = await game_loc.evaluateAll(elements => elements.map(a => a.getAttribute('href')));
   const urls = urlSlugs.map(s => 'https://store.epicgames.com' + s);
   console.log('Free games:', urls);
 
@@ -182,7 +184,9 @@ try {
       title = (await page.locator('span:has-text("Buy"):left-of([data-testid="purchase-cta-button"])').first().innerText()).replace('Buy ', '');
       // h1 first didn't exist for bundles but now it does... However h1 would e.g. be 'Fallout® Classic Collection' instead of 'Fallout Classic Collection'
       try {
-        bundle_includes = await Promise.all((await page.locator('.product-card-top-row h5').all()).map(b => b.innerText()));
+        // Bolt: Optimized sequential Playwright locator lookups using allInnerTexts()
+        // Extracts all matching text in a single round-trip, significantly reducing IPC overhead to O(1)
+        bundle_includes = await page.locator('.product-card-top-row h5').allInnerTexts();
       } catch (e) {
         console.error('Failed to get "Bundle Includes":', e);
       }
