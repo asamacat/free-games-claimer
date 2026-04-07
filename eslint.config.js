@@ -11,7 +11,7 @@ export default [
   {
     ignores: ['data/**'],
   },
-  js.configs.recommended, // TODO still needed?
+  js.configs.recommended,
   {
     // files: ['*.js'],
     languageOptions: {
