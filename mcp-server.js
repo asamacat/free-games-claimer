@@ -122,18 +122,18 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
     }
 
     const dataFile = dataDir(`${store}.json`);
-    if (!fs.existsSync(dataFile)) {
-      return {
-        content: [{ type: 'text', text: `No data file found for ${store} at ${dataFile}. Have you run the script yet?` }],
-      };
-    }
-
+    // Bolt: Optimized to use non-blocking async I/O
     try {
-      const data = fs.readFileSync(dataFile, 'utf8');
+      const data = await fs.promises.readFile(dataFile, 'utf8');
       return {
         content: [{ type: 'text', text: data }],
       };
     } catch (error) {
+      if (error.code === 'ENOENT') {
+        return {
+          content: [{ type: 'text', text: `No data file found for ${store} at ${dataFile}. Have you run the script yet?` }],
+        };
+      }
       return {
         content: [{ type: 'text', text: `Error reading data file: ${error.message}` }],
         isError: true,
@@ -147,14 +147,23 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
     const configPath = dataDir('config.env');
 
     const existingConfig = {};
-    if (fs.existsSync(configPath)) {
-      const raw = fs.readFileSync(configPath, 'utf8');
+    // Bolt: Optimized to use non-blocking async I/O
+    try {
+      const raw = await fs.promises.readFile(configPath, 'utf8');
       raw.split('\n').forEach(line => {
         const parts = line.split('=');
         if (parts.length >= 2) {
           existingConfig[parts[0].trim()] = parts.slice(1).join('=').trim();
         }
       });
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        return {
+          content: [{ type: 'text', text: `Error reading config file: ${error.message}` }],
+          isError: true,
+        };
+      }
+      // File doesn't exist, which is fine
     }
 
     // Process base64 if it's a password
@@ -171,8 +180,9 @@ server.setRequestHandler(CallToolRequestSchema, async request => {
       }
     }
 
-    fs.mkdirSync(dataDir(''), { recursive: true });
-    fs.writeFileSync(configPath, configContent);
+    // Bolt: Optimized to use non-blocking async I/O
+    await fs.promises.mkdir(dataDir(''), { recursive: true });
+    await fs.promises.writeFile(configPath, configContent);
 
     return {
       content: [{ type: 'text', text: `Successfully updated ${key} in config.` }],
