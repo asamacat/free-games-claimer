@@ -169,15 +169,20 @@ try {
   }
   console.log('\nNumber of free unclaimed games (external stores):', external.length);
   // claim games in external/linked stores. Linked: origin.com, epicgames.com; Redeem-key: gog.com, legacygames.com, microsoft
-  // Bolt: Optimized sequential Playwright locator lookups with Promise.all
-  // By requesting elements concurrently, we save significant overhead avoiding repeated IPC boundary crossing
-  const external_info = await Promise.all(external.map(async card => { // need to get data incl. URLs in this loop and then navigate in another, otherwise .all() would update after coming back and .elementHandles() like above would lead to error due to page navigation: elementHandle.$: Protocol error (Page.adoptNode)
-    const [title, slug] = await Promise.all([
-      card.locator('.item-card-details__body__primary').innerText(),
-      card.locator('a:has-text("Claim")').first().getAttribute('href'),
-    ]);
+  // Bolt: Optimized Playwright locator lookups with evaluateAll
+  // By evaluating directly in the browser, we extract all required data in a single IPC call (O(1) latency)
+  const externalLocator = games.locator('.item-card__action:has(a[data-a-target="FGWPOffer"])');
+  const external_info = await externalLocator.evaluateAll(elements => elements.map(card => { // need to get data incl. URLs in this loop and then navigate in another, otherwise .all() would update after coming back and .elementHandles() like above would lead to error due to page navigation: elementHandle.$: Protocol error (Page.adoptNode)
+    const titleEl = card.querySelector('.item-card-details__body__primary');
+    const claimLink = Array.from(card.querySelectorAll('a')).find(a => {
+      const text = (a.innerText || '').trim().toLowerCase();
+      return text.includes('claim');
+    });
+
+    const title = titleEl ? titleEl.innerText : '';
+    const slug = claimLink ? claimLink.getAttribute('href') : '';
+
     const url = 'https://gaming.amazon.com' + slug.split('?')[0];
-    // await (await card.$('text=Claim')).click(); // goes to URL of game, no need to wait
     return { title, url };
   }));
   // external_info = [ { title: 'Fallout 76 (XBOX)', url: 'https://gaming.amazon.com/fallout-76-xbox-fgwp/dp/amzn1.pg.item.9fe17d7b-b6c2-4f58-b494-cc4e79528d0b?ingress=amzn&ref_=SM_Fallout76XBOX_S01_FGWP_CRWN' } ];
@@ -372,16 +377,19 @@ try {
 
     console.log('\nNumber of already claimed DLC:', await loot.locator('p:has-text("Collected")').count());
 
-    const cards = await loot.locator('[data-a-target="item-card"]:has(p:text-is("Claim"))').all();
-    console.log('Number of unclaimed DLC:', cards.length);
-    // Bolt: Optimized sequential Playwright locator lookups with Promise.all
-    // By requesting elements concurrently, we save significant overhead avoiding repeated IPC boundary crossing
-    const dlcs = await Promise.all(cards.map(async card => {
-      const [game, title, slug] = await Promise.all([
-        card.locator('.item-card-details__body p').innerText(),
-        card.locator('.item-card-details__body__primary').innerText(),
-        card.locator('a').first().getAttribute('href'),
-      ]);
+    const cardsLocator = loot.locator('[data-a-target="item-card"]:has(p:text-is("Claim"))');
+    console.log('Number of unclaimed DLC:', await cardsLocator.count());
+    // Bolt: Optimized Playwright locator lookups with evaluateAll
+    // By evaluating directly in the browser, we extract all required data in a single IPC call (O(1) latency)
+    const dlcs = await cardsLocator.evaluateAll(elements => elements.map(card => {
+      const gameEl = card.querySelector('.item-card-details__body p');
+      const titleEl = card.querySelector('.item-card-details__body__primary');
+      const link = card.querySelector('a');
+
+      const game = gameEl ? gameEl.innerText : '';
+      const title = titleEl ? titleEl.innerText : '';
+      const slug = link ? link.getAttribute('href') : '';
+
       return { game, title, url: 'https://gaming.amazon.com' + slug };
     }));
     // console.log(dlcs);

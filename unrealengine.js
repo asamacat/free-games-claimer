@@ -96,19 +96,21 @@ try {
   page.locator('button:has-text("Accept All Cookies")').click().catch(_ => { });
 
   const ids = [];
-  const assets = await page.locator('article.asset').all();
-  // Bolt: Optimized sequential Playwright locator lookups with Promise.all
-  // By requesting elements concurrently, we save significant overhead avoiding repeated IPC boundary crossing
-  const assetData = await Promise.all(assets.map(async p => {
-    const link = p.locator('h3 a');
-    const [title, href, className, inCartCount] = await Promise.all([
-      link.innerText(),
-      link.getAttribute('href'),
-      p.getAttribute('class'),
-      p.locator('.btn .in-cart').count(),
-    ]);
-    return { p, title, url: 'https://www.unrealengine.com' + href, className, inCartCount };
+  const assetsLocator = page.locator('article.asset');
+  const assets = await assetsLocator.all();
+  // Bolt: Optimized Playwright locator lookups with evaluateAll
+  // By evaluating directly in the browser, we extract all required data in a single IPC call (O(1) latency)
+  const extractedData = await assetsLocator.evaluateAll(elements => elements.map((p, index) => {
+    const link = p.querySelector('h3 a');
+    return {
+      index,
+      title: link ? link.innerText : '',
+      url: 'https://www.unrealengine.com' + (link ? link.getAttribute('href') : ''),
+      className: p.getAttribute('class') || '',
+      inCartCount: p.querySelectorAll('.btn .in-cart').length,
+    };
   }));
+  const assetData = extractedData.map(data => ({ p: assets[data.index], ...data }));
 
   for (const { p, title, url, className, inCartCount } of assetData) {
     console.log([title, url]);
