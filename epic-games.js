@@ -182,7 +182,7 @@ try {
       title = (await page.locator('span:has-text("Buy"):left-of([data-testid="purchase-cta-button"])').first().innerText()).replace('Buy ', '');
       // h1 first didn't exist for bundles but now it does... However h1 would e.g. be 'Fallout® Classic Collection' instead of 'Fallout Classic Collection'
       try {
-        bundle_includes = await Promise.all((await page.locator('.product-card-top-row h5').all()).map(b => b.innerText()));
+        bundle_includes = await page.locator('.product-card-top-row h5').allInnerTexts();
       } catch (e) {
         console.error('Failed to get "Bundle Includes":', e);
       }
