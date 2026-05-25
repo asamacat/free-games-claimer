@@ -9,3 +9,6 @@
 ## 2026-03-25 - Non-blocking configuration I/O
 **Learning:** Performing synchronous file operations (`fs.writeFileSync`, `fs.readFileSync`) within an `async` function blocks the Node.js event loop, preventing it from handling other concurrent tasks even if the operation itself is relatively fast.
 **Action:** Always prefer `fs.promises` (or `fs/promises`) for I/O operations inside `async` functions to ensure the event loop remains unblocked and the application stays responsive.
+## 2026-06-25 - Playwright IPC Overhead with `Promise.all`
+**Learning:** While `Promise.all` executes concurrently in Node, using it to map over `elementHandles()` or `locator.all()` (e.g., `await Promise.all(locators.map(loc => loc.innerText()))`) still generates N individual IPC messages across the Node/Browser boundary.
+**Action:** Use native Playwright batch methods like `evaluateAll()` or `allInnerTexts()` instead. These methods execute a single script in the browser context and return the results directly, achieving O(1) IPC latency compared to O(N) with `Promise.all`.
