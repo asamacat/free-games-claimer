@@ -9,3 +9,6 @@
 ## 2026-03-25 - Non-blocking configuration I/O
 **Learning:** Performing synchronous file operations (`fs.writeFileSync`, `fs.readFileSync`) within an `async` function blocks the Node.js event loop, preventing it from handling other concurrent tasks even if the operation itself is relatively fast.
 **Action:** Always prefer `fs.promises` (or `fs/promises`) for I/O operations inside `async` functions to ensure the event loop remains unblocked and the application stays responsive.
+## 2024-05-20 - Optimizing Playwright concurrent extraction
+**Learning:** While using `Promise.all` + `.map()` over a list of locators or element handles allows for concurrent extraction (which is better than sequential), it still incurs significant Inter-Process Communication (IPC) overhead between Node.js and the browser because each `.getAttribute()` or `.innerText()` call represents a separate client-server request.
+**Action:** Always prefer native Playwright batch methods like `locator.allInnerTexts()` or `locator.evaluateAll()` instead of mapping over `.all()` or `.elementHandles()`. These methods execute the extraction directly within the browser context and return all results in a single O(1) IPC call, drastically reducing overhead.
